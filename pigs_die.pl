@@ -154,71 +154,12 @@ my $player = {
 	},
 };
 
-#you should make this a while loop instead
-sub main
-{
-	while ($player->{health} > 0 and $player->{wanted} > 50) {
-		check_stats($player);
-	};
-
-	goto_inventory();
-
-	while ($player->{days} >= 30) {
-		print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
-	}
-	
-	print "\n===Main Menu===\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
-	my $option = prompt "What would you like to do?", [ "r", "b", "s", "q" ];
-
-	if ($option eq "shell")
-	{
-		goto_debug();
-	}
-	elsif ($option =~ /^r/i)
-	{
-		print "not implemented\n";
-	}
-	elsif ($option =~ /^b/i)
-	{
-		goto_buy ();
-	}
-	elsif ($option =~ /^s/i)
-	{
-		goto_sell ();
-	}
-	elsif ($option =~ /^q/i)
-	{
-		exit;
-	}
-	else
-	{
-		insult("wrong_key");
-	}	
-}
 
 
 sub goto_inventory
 {
-                print <<EOF;
-                YOUR STATS
-                ==========
-                Health: $player->{health}
-		Cash: $player->{mycash}
-                Wanted Level: $player->{wanted}
-                
-                Stealth: $player->{stealth}
-                Fight:  $player->{fighting}
-                Evasion: $player->{evasion}
-                
-
-                Your Coat
-                =========
-		cocaine: $player->{coat}{cocaine}
-                maryjane: $player->{coat}{maryjane}
-                lsd: $player->{coat}{lsd}
-                shrooms: $player->{coat}{shrooms}
-                skooma:  $player->{coat}{skooma}
-EOF
+	print "YOUR STATS\n==========\n"
+	#print "Key: $_ and Value: $player{$_}\n" foreach (keys$player);
 }
 
 sub goto_buy
@@ -398,6 +339,42 @@ sub goto_debug
 	}
 }
 
+sub main
+{
+
+	my %dispatch = (
+	 r => sub { print "not implemented\n" },
+	 b => \&goto_buy,
+	 s => \&goto_sell,
+	 );
+
+	my $option; 
+
+	do {
+		if ($player->{days} >= 30 or $player->{health} <= 0) {
+			print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
+			goto_inventory();
+			last;
+		}
+
+		if ($player->{wanted} > 50) { #get hassled by the cops each day
+		check_stats($player);
+		};
+
+		redo if $player->{wanted} > 75; #now you can only be hassled by the cops
+		
+		goto_inventory();
+
+		print "===Main Menu===\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
+
+		$option = prompt "What would you like to do?", [ "r", "b", "s", "q" ];
+
+		if (exists $dispatch{$option}) {
+			$dispatch{$option}->($player);
+		}
+
+	}
+}
 
 print "\n~~~~~~WELCOME TRAVELER! ~~~~~~~\n\n";
 main ();
