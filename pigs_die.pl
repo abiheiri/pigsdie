@@ -67,7 +67,7 @@ sub check_stats {
 		if ($be_a_hero_or_bitch =~ /a/i) {
 			fight_pigs($player);
 		} else {
-			if (rand() <= $player->{stealth}) {
+			if (rand() <= $player->{skills}{stealth}) {
 				$player->{wanted} -= 5;
 				print "You escape!\n";
 				$player->{wanted} = 0;
@@ -87,7 +87,7 @@ sub fight_pigs {
 	my $keep_fighting = "y";
 	while ($pigs and $keep_fighting =~ /y/i) {
 		#player fires
-		if (rand() <= $player->{fighting}) {
+		if (rand() <= $player->{skills}{fighting}) {
 			print "You hit one of the officiers!\n";
 			$pigs--;
 		} else {
@@ -95,7 +95,7 @@ sub fight_pigs {
 		}
 
 		#cops fire
-		if (rand() <= (1 - $player->{evasion})) {
+		if (rand() <= (1 - $player->{skills}{evasion})) {
 			print "Police shot your bitch ass! Go to the gym and play dodge ball\n";
 			$player->{health} -= 10;
 			if ($player->{health} <= 0) {
@@ -105,7 +105,7 @@ sub fight_pigs {
 			} else {
 		       		print "You have $player->{health} health left.\n";
 
-				if (rand() > $player->{coolness}) {
+				if (rand() > $player->{skills}{coolness}) {
 					my @drugs = grep { $player->{coat}{$_} } keys %{ $player->{coat} };
 					#can't drop what you don't have
 					if (@drugs) {
@@ -124,7 +124,7 @@ sub fight_pigs {
 		$keep_fighting = prompt "Want to keep fighting?\n", [ "y", "n" ];
 
 		if ($keep_fighting =~ /n/i) {
-			if (rand() <= $player->{stealth}) {
+			if (rand() <= $player->{skills}{stealth}) {
 				print "You got away!\n";
 				$player->{wanted} = 0;
 			} else {
@@ -135,53 +135,87 @@ sub fight_pigs {
 	}
 }
 
-#you should move this to main();
-my $player = {
-	days	 => 0,
-	health   => 100,
-	wanted   => 0,
-	stealth  => .50,
-	fighting => .50,
-	evasion  => .50,
-	coolness => .50,
-	mycash	 => 1000,
-	coat   => {
-		cocaine  => 0,
-		maryjane => 0,
-		lsd      => 0,
-		shrooms  => 0,
-		skooma  => 0,
-	},
-};
 
 
-
-sub goto_inventory
+sub print_underlined
 {
-	print "YOUR STATS\n==========\n"
-	#print "Key: $_ and Value: $player{$_}\n" foreach (keys$player);
+	my $message = shift;
+
+	print "\n$message\n", "=" x length $message, "\n";
 }
 
-sub goto_buy
+sub show_yo_shit
 {
-	my %costs = ( 
-		maryjane => int rand 300,
-		skooma => int rand 100,
-		shrooms => 10 + int rand 90,
-		lsd => 100 + int rand 50,
-		cocaine => 1000 + int rand 20000,
-	  );
+	my $player = shift;
+
+	print_underlined "YOUR STATS";
+
+	for my $stat (sort keys %$player) {
+		next if ref $player->{$stat}; #skip coat and skills
+		print "$stat: $player->{$stat}\n";
+	}
+		
+	print_underlined "SKILLS";
+
+	for my $skill (sort keys %{$player->{skills}}) {
+		printf "%8s: %d\n", $skill, $player->{skills}{$skill};
+	}
+
+	print_underlined "YOUR COAT";
+
+	for my $drug (sort keys %{$player->{coat}}) {
+		printf "%8s: %d\n", $drug, $player->{coat}{$drug};
+	}
+	
+	print "\n";
+}
+
+sub do_bidness
+{
+	my $player       = shift;
+	my $bidness_type = shift;
 
 	$player->{days}++;
 
 	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
 
+	my %costs = ( 
+		maryjane => int rand 300,
+		skooma   => int rand 100,
+		shrooms  => 10 + int rand 90,
+		lsd      => 100 + int rand 50,
+		cocaine  => 1000 + int rand 20000,
+	);
 
-	my @valid_drugs = grep { $costs{$_} > 5 } sort keys %costs;
+	#this is nasty and needs fixing
+	my @valid_drugs;
+	if ($bidness_type eq "buy")
+	{
+		my @valid_drugs = $bidness_type eq "buy"         ? 
+			grep { $costs{$_} > 5 } sort keys %costs :
+			grep { $player->{coat}{$_} } keys %{ $player->{coat} };
+
+		for my $drug (@valid_drugs)
+		{
+			printf "%8s: %d\n", $drug, $costs{$drug};
+		}
+	}
+	else
+	{
+		my @valid_drugs = $bidness_type eq "sell"         ? 
+			grep { $costs{$_} > 5 } sort keys %costs :
+			grep { $player->{coat}{$_} } keys %{ $player->{coat} };
+
+		for my $drug (@valid_drugs)
+		{
+			printf "%8s: %d\n", $drug, $costs{$drug};
+		}
+	}
+
 
 	for my $drug (@valid_drugs)
 	{
-		print "$drug: $costs{$drug}\n"
+		printf "%8s: %d\n", $drug, $costs{$drug};
 	}
 
 
@@ -200,181 +234,120 @@ sub goto_buy
 	my $valid_drug_regex = join "|", sort { length($b) <=> length($a) } @valid_drugs;
 	$valid_drug_regex = qr/$valid_drug_regex/;
 	 
-	print "purchase drugs [@valid_drugs]: \(type \"quit\" at any time to exit\)\n";
-	while (my $line = <>) {
+	print "$bidness_type drugs [@valid_drugs]: \(type \"quit\" at any time to exit\)\n";
+	while (my $line = <>)
+	{
 		chomp $line;
 		my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
 
-		if ($line eq "quit" or $line eq "q" )
-		{
-			main ();
-			return;
-		}
+		return if $line eq "quit" or $line eq "q";
 
 		unless (defined $amount and defined $drug) {
 			print "I don't understand: [$line]\n",
 				"valid drugs are: @valid_drugs\n",
-				"purchase drugs by saying 'amount drug'\n";
+				"$bidness_type drugs by saying 'amount drug'\n";
 			next;
 		}
 	
 		my $cost = $amount * $costs{$drug};
-		if ($player->{mycash} < $cost)
+
+		#FIXME: this could probably be factored out more, there is still a 
+		#lot of common structure
+		if ($bidness_type eq "buy")
 		{
-		       insult("purchase");
-		       print " for $amount $drug\n";
+			if ($player->{cash} < $cost)
+			{
+				insult("purchase");
+				print " for $amount $drug\n";
+			}
+			else
+			{
+				$player->{cash}        = $player->{cash}        - $cost;
+				$player->{coat}{$drug} = $player->{coat}{$drug} + $amount;
+				$player->{wanted}++;
+				print "you purchased $amount $drug\n";
+				unless (grep { $player->{cash} > $_ } values %costs) {
+					print "you can't afford shit, go sell somethin'\n";
+					last;
+				}
+			}	
+
+		} else {
+			if ($player->{coat}{$drug} <= 0)
+			{
+				insult("sell");
+				print " for $amount $drug\n";
+			}
+			else
+			{
+
+				$player->{mycash}      = $player->{mycash}      + $cost;
+				$player->{coat}{$drug} = $player->{coat}{$drug} - $amount;
+				$player->{wanted}++;
+				print "you sold $amount $drug\n";
+				unless (grep { $_ } values %{ $player->{coat} }) {
+					print "you don't got shit left, go buy somethin'\n";
+					last;
+				}
+			}
 		}
-		else
-		{
-		       $player->{mycash} = $player->{mycash} - $cost;
-		       $player->{coat}{$drug} = $player->{coat}{$drug} + $amount;
-		       $player->{wanted}++;
-		       print "you purchased $amount $drug\n";
-	       }	
-
-	}
-}
-
-sub goto_sell
-{
-	my %costs = ( 
-		maryjane => int rand 300,
-		skooma => int rand 100,
-		shrooms => 10 + int rand 90,
-		lsd => 100 + int rand 50,
-		cocaine => 1000 + int rand 20000,
-	  );
-
-	$player->{days}++;
-
-	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
-
-
-	my @valid_drugs = grep { $costs{$_} > 5 } sort keys %costs;
-
-	for my $drug (@valid_drugs)
-	{
-		print "$drug: $costs{$drug}\n"
-	}
-
-
-	if ($costs{cocaine} < 10000)
-	{
-		print "Looks like the chinese flooded the market with cheap coke, prices bottomed out!\n";
-	}
-	 
-	my $valid_drug_regex = join "|", sort { length($b) <=> length($a) } @valid_drugs;
-	$valid_drug_regex = qr/$valid_drug_regex/;
-	 
-	print "sell drugs [@valid_drugs]: \(type \"quit\" at any time to exit\)\n";
-	while (my $line = <>) {
-		chomp $line;
-		my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
-
-		if ($line eq "quit" or $line eq "q" )
-		{
-			main ();
-			return;
-		}
-
-		unless (defined $amount and defined $drug) {
-			print "I don't understand: [$line]\n",
-				"valid drugs are: @valid_drugs\n",
-				"sell drugs by saying 'amount drug'\n";
-			next;
-		}
-	
-		my $cost = $amount * $costs{$drug};
-		if ($player->{coat}{$drug} <= 0)
-		{
-		       insult("sell");
-		       print " for $amount $drug\n";
-		}
-		else
-		{
-
-			$player->{mycash} = $player->{mycash} + $cost;
-			$player->{coat}{$drug} = $player->{coat}{$drug} - $amount;
-			$player->{wanted}++;
-			print "you sold $amount $drug\n";
-		}
-	}
-}
-
-
-		
-sub goto_debug
-{
-	print "Shell\$:";
-
-        my @valid_drugs = qw(
-                cash
-                health
-                wanted
-        );
-
-        my $valid_drug_regex = join "|", sort { length($b) <=> length($a) } @valid_drugs;
-        $valid_drug_regex = qr/$valid_drug_regex/;
-
-        while (my $line = <>) {
-                chomp $line;
-                my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
-	
-		if ($line eq "quit" )
-                {
-                        main ();
-                        last;
-                }
-
-                unless (defined $amount and defined $drug) {
-			insult("wrong_key");
-                        next;
-                }
-		
-		if ( $drug eq "cash"){ $player->{mycash} = $amount; }
-		elsif ( $drug eq "health"){ $player->{health} = $amount; }
-		elsif ( $drug eq "wanted"){ $player->{wanted} = $amount; }
-                
-
 	}
 }
 
 sub main
 {
+	my $player = {
+		days   => 0,
+		health => 100,
+		wanted => 0,
+		cash   => 1000,
+		skills => {
+			stealth  => .50,
+			fighting => .50,
+			evasion  => .50,
+			coolness => .50,
+		},
+		coat   => {
+			cocaine  => 0,
+			maryjane => 0,
+			lsd      => 0,
+			shrooms  => 0,
+			skooma   => 0,
+		},
+	};
 
 	my %dispatch = (
-	 r => sub { print "not implemented\n" },
-	 b => \&goto_buy,
-	 s => \&goto_sell,
-	 );
+		i => \&show_yo_shit,
+		r => sub { print "not implemented\n" },
+		b => sub { do_bidness(@_, "buy") },
+		s => sub { do_bidness(@_, "sell") },
+	);
 
-	my $option; 
-
+	my $option;
 	do {
 		if ($player->{days} >= 30 or $player->{health} <= 0) {
 			print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
-			goto_inventory();
+			show_yo_shit($player);
 			last;
 		}
 
 		if ($player->{wanted} > 50) { #get hassled by the cops each day
-		check_stats($player);
+			check_stats($player);
 		};
 
 		redo if $player->{wanted} > 75; #now you can only be hassled by the cops
-		
-		goto_inventory();
 
-		print "===Main Menu===\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
+		show_yo_shit($player);
 
-		$option = prompt "What would you like to do?", [ "r", "b", "s", "q" ];
+		print "===Main Menu===\n [i] check inventory\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
+		$option = prompt "What would you like to do?", [ "i", "r", "b", "s", "q" ];
 
 		if (exists $dispatch{$option}) {
 			$dispatch{$option}->($player);
 		}
 
-	}
+	} while $option ne "q";
 }
 
 print "\n~~~~~~WELCOME TRAVELER! ~~~~~~~\n\n";
-main ();
+main;
