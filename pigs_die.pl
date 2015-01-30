@@ -161,22 +161,18 @@ sub main
 		check_stats($player);
 	};
 
+	goto_inventory();
+
 	while ($player->{days} >= 30) {
 		print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
-		goto_inventory();
 	}
-
-	print "===Main Menu===\n [i] check inventory\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
-	my $option = prompt "What would you like to do?", [ "i", "r", "b", "s", "q" ];
+	
+	print "\n===Main Menu===\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
+	my $option = prompt "What would you like to do?", [ "r", "b", "s", "q" ];
 
 	if ($option eq "shell")
 	{
 		goto_debug();
-	}
-	elsif ($option =~ /^i/i)
-	{
-		goto_inventory();
-		main ();
 	}
 	elsif ($option =~ /^r/i)
 	{
@@ -403,4 +399,5 @@ sub goto_debug
 }
 
 
+print "\n~~~~~~WELCOME TRAVELER! ~~~~~~~\n\n";
 main ();
