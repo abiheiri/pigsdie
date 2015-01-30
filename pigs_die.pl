@@ -35,11 +35,18 @@ sub insult {
 			"you dont have that kinda cash",
 			"moron, you dont have that kinda \$\$\$",
 		],
+	
+		sell => [
+			"Im sorry, you cant make shit put of thin air",
+			"you dont have that item, you fuck stick",
+			"fuck outta here, you dont have any available",
+		],
 		
 		wrong_key => [
 			"Apparently you're an idiot who doesnt know how to press the correct key",
 			"Man you are stupid, you pressed some useless key",
 			"PEBCAK",
+			"Please press a valid key",
 		],
 	);
 
@@ -128,6 +135,7 @@ sub fight_pigs {
 	}
 }
 
+#you should move this to main();
 my $player = {
 	days	 => 0,
 	health   => 100,
@@ -146,15 +154,20 @@ my $player = {
 	},
 };
 
+#you should make this a while loop instead
 sub main
 {
 	while ($player->{health} > 0 and $player->{wanted} > 50) {
 		check_stats($player);
 	};
 
-	print "What would you like to do?\n [i] check inventory\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
-	my $option = <>;
-	chomp ($option);
+	while ($player->{days} >= 30) {
+		print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
+		goto_inventory();
+	}
+
+	print "===Main Menu===\n [i] check inventory\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
+	my $option = prompt "What would you like to do?", [ "i", "r", "b", "s", "q" ];
 
 	if ($option eq "shell")
 	{
@@ -162,14 +175,12 @@ sub main
 	}
 	elsif ($option =~ /^i/i)
 	{
-		display_inventory();
-		$option = <>;
+		goto_inventory();
 		main ();
 	}
 	elsif ($option =~ /^r/i)
 	{
 		print "not implemented\n";
-		main();
 	}
 	elsif ($option =~ /^b/i)
 	{
@@ -177,8 +188,7 @@ sub main
 	}
 	elsif ($option =~ /^s/i)
 	{
-		print "not implemented\n";
-		#goto_sell ();
+		goto_sell ();
 	}
 	elsif ($option =~ /^q/i)
 	{
@@ -187,12 +197,11 @@ sub main
 	else
 	{
 		insult("wrong_key");
-		main ();
 	}	
 }
 
 
-sub display_inventory
+sub goto_inventory
 {
                 print <<EOF;
                 YOUR STATS
@@ -218,42 +227,31 @@ EOF
 
 sub goto_buy
 {
-	my $mj = int rand 300;
-	my $skooma = int rand 100;
-	my $shrooms = int rand 100;
-	my $lsd = int rand 100;
-	my $cocaine = int rand 20000;
+	my %costs = ( 
+		maryjane => int rand 300,
+		skooma => int rand 100,
+		shrooms => 10 + int rand 90,
+		lsd => 100 + int rand 50,
+		cocaine => 1000 + int rand 20000,
+	  );
 
 	$player->{days}++;
 
-	print <<EOF;
-	
-	Day: $player->{days}
-	====
-	Welcome to the silkroad, below are current market prices...
+	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
 
-	cocaine: $cocaine
-	lsd: $lsd
-	maryjane: $mj
-	shrooms: $shrooms
-	skooma: $skooma
-	
 
-EOF
+	my @valid_drugs = grep { $costs{$_} > 5 } sort keys %costs;
 
-	if ($cocaine < 10000)
+	for my $drug (@valid_drugs)
+	{
+		print "$drug: $costs{$drug}\n"
+	}
+
+
+	if ($costs{cocaine} < 10000)
 	{
 		print "Looks like the chinese flooded the market with cheap coke, prices bottomed out!\n";
 	}
-
-	#list of valid drugs
-	my @valid_drugs = qw(
-		cocaine
-		maryjane
-		lsd
-		shrooms
-		skooma
-	);
 	 
 	#regex to match any valid drug, it is reverse sorted by length to avoid a
 	#problem where a substring matches instead of the whole string.  It isn't a
@@ -270,10 +268,10 @@ EOF
 		chomp $line;
 		my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
 
-		if ($line eq "quit" )
+		if ($line eq "quit" or $line eq "q" )
 		{
 			main ();
-			last;
+			return;
 		}
 
 		unless (defined $amount and defined $drug) {
@@ -282,88 +280,92 @@ EOF
 				"purchase drugs by saying 'amount drug'\n";
 			next;
 		}
-		
+	
+		my $cost = $amount * $costs{$drug};
+		if ($player->{mycash} < $cost)
+		{
+		       insult("purchase");
+		       print " for $amount $drug\n";
+		}
+		else
+		{
+		       $player->{mycash} = $player->{mycash} - $cost;
+		       $player->{coat}{$drug} = $player->{coat}{$drug} + $amount;
+		       $player->{wanted}++;
+		       print "you purchased $amount $drug\n";
+	       }	
 
-		if ( $drug eq "cocaine")
+	}
+}
+
+sub goto_sell
+{
+	my %costs = ( 
+		maryjane => int rand 300,
+		skooma => int rand 100,
+		shrooms => 10 + int rand 90,
+		lsd => 100 + int rand 50,
+		cocaine => 1000 + int rand 20000,
+	  );
+
+	$player->{days}++;
+
+	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
+
+
+	my @valid_drugs = grep { $costs{$_} > 5 } sort keys %costs;
+
+	for my $drug (@valid_drugs)
+	{
+		print "$drug: $costs{$drug}\n"
+	}
+
+
+	if ($costs{cocaine} < 10000)
+	{
+		print "Looks like the chinese flooded the market with cheap coke, prices bottomed out!\n";
+	}
+	 
+	my $valid_drug_regex = join "|", sort { length($b) <=> length($a) } @valid_drugs;
+	$valid_drug_regex = qr/$valid_drug_regex/;
+	 
+	print "sell drugs [@valid_drugs]: \(type \"quit\" at any time to exit\)\n";
+	while (my $line = <>) {
+		chomp $line;
+		my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
+
+		if ($line eq "quit" or $line eq "q" )
 		{
-			my $cost = $amount * $cocaine;
-			if ($player->{mycash} < $cost)
-			{
-				insult("purchase");
-				print " for $amount $drug\n";
-			}
-			else
-			{
-				$player->{mycash} = $player->{mycash} - $cost;
-				$player->{coat}{cocaine} = $player->{coat}{cocaine} + $amount;
-				$player->{wanted}++;
-				print "you purchased $amount $drug\n";
-			}
+			main ();
+			return;
 		}
-		elsif ( $drug eq "maryjane")
-		{
-			my $cost = $amount * $mj;
-			if ($player->{mycash} < $cost)
-			{
-				print "You lack the funds to buy $amount $drug\n";
-			}
-			else
-			{
-				$player->{mycash} = $player->{mycash} - $cost;
-				$player->{coat}{maryjane} = $player->{coat}{maryjane} + $amount;
-				$player->{wanted}++;
-				print "you purchased $amount $drug\n";
-			}
+
+		unless (defined $amount and defined $drug) {
+			print "I don't understand: [$line]\n",
+				"valid drugs are: @valid_drugs\n",
+				"sell drugs by saying 'amount drug'\n";
+			next;
 		}
-		elsif ( $drug eq "lsd")
+	
+		my $cost = $amount * $costs{$drug};
+		if ($player->{coat}{$drug} <= 0)
 		{
-			my $cost = $amount * $lsd;
-			if ($player->{mycash} < $cost)
-			{
-				print "You lack the funds to buy $amount $drug\n";
-			}
-			else
-			{
-				$player->{mycash} = $player->{mycash} - $cost;
-				$player->{coat}{lsd} = $player->{coat}{lsd} + $amount;
-				$player->{wanted}++;
-				print "you purchased $amount $drug\n";
-			}
+		       insult("sell");
+		       print " for $amount $drug\n";
 		}
-		elsif ( $drug eq "shrooms")
+		else
 		{
-			my $cost = $amount * $shrooms;
-			if ($player->{mycash} < $cost)
-			{
-				print "You lack the funds to buy $amount $drug\n";
-			}
-			else
-			{
-				$player->{mycash} = $player->{mycash} - $cost;
-				$player->{coat}{shrooms} = $player->{coat}{shrooms} + $amount;
-				$player->{wanted}++;
-				print "you purchased $amount $drug\n";
-			}
-		}
-		elsif ( $drug eq "skooma")
-		{
-			my $cost = $amount * $skooma;
-			if ($player->{mycash} < $cost)
-			{
-				print "You lack the funds to buy $amount $drug\n";
-			}
-			else
-			{
-				$player->{mycash} = $player->{mycash} - $cost;
-				$player->{coat}{skooma} = $player->{coat}{skooma} + $amount;
-				$player->{wanted}++;
-				print "you purchased $amount $drug\n";
-			}
+
+			$player->{mycash} = $player->{mycash} + $cost;
+			$player->{coat}{$drug} = $player->{coat}{$drug} - $amount;
+			$player->{wanted}++;
+			print "you sold $amount $drug\n";
 		}
 	}
 }
 
 
+		
 sub goto_debug
 {
 	print "Shell\$:";
