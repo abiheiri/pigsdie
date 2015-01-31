@@ -338,7 +338,7 @@ sub main
 		if ($player->{days} >= 30 or $player->{health} <= 0) {
 			print "GaMe OvEr!\n ====\n You've reached $player->{days} days\n";
 			show_yo_shit($player);
-			last;
+			return;
 		}
 
 		if ($player->{wanted} > 50) { #get hassled by the cops each day
