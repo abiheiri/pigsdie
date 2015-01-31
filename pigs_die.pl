@@ -48,6 +48,16 @@ sub insult {
 			"PEBCAK",
 			"Please press a valid key",
 		],
+		poor => [
+			"Who you tryin' to fool? You ain't got no money",
+		],
+		no_drugs => [
+			"What are you going to sell? Air? Dumbass.",
+			"What are you going to sell? Air? I do hear oxygen can get you high."
+		],
+		waste_of_time => [
+			"Well, that was a waste of time."
+		],
 	);
 
 	my $insults = $categories{$category};
@@ -177,8 +187,6 @@ sub do_bidness
 
 	$player->{days}++;
 
-	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
-
 	my %costs = ( 
 		maryjane => int rand 300,
 		skooma   => int rand 100,
@@ -187,39 +195,35 @@ sub do_bidness
 		cocaine  => 1000 + int rand 20000,
 	);
 
-	#this is nasty and needs fixing
-	my @valid_drugs;
-	if ($bidness_type eq "buy")
-	{
-		my @valid_drugs = $bidness_type eq "buy"         ? 
-			grep { $costs{$_} > 5 } sort keys %costs :
-			grep { $player->{coat}{$_} } keys %{ $player->{coat} };
+	my @valid_drugs = $bidness_type eq "buy"
+		? grep { $player->{cash} > $costs{$_} } sort keys %costs
+		: grep { $player->{coat}{$_} } keys %{ $player->{coat} };
 
-		for my $drug (@valid_drugs)
-		{
-			printf "%8s: %d\n", $drug, $costs{$drug};
-		}
-	}
-	else
+	# if player can't buy or sell anything, boot him or her
+	unless (@valid_drugs)
 	{
-		my @valid_drugs = $bidness_type eq "sell"         ? 
-			grep { $costs{$_} > 5 } sort keys %costs :
-			grep { $player->{coat}{$_} } keys %{ $player->{coat} };
-
-		for my $drug (@valid_drugs)
-		{
-			printf "%8s: %d\n", $drug, $costs{$drug};
-		}
+		insult($bidness_type eq "buy" ? "poor" : "no_drugs");
+		return;
 	}
 
+	# not everything is always for sale, and sometimes no one wants a drug
+	# FIXME: magic constant 75, should be based on a skill
+	@valid_drugs = grep { rand() < 75 } @valid_drugs;
+
+	unless (@valid_drugs)
+	{
+		insult("waste_of_time");
+		return;
+	}
+
+	print "Day: $player->{days}\n", "====\n", "Welcome to the silkroad, below are current market prices...\n";
 
 	for my $drug (@valid_drugs)
 	{
 		printf "%8s: %d\n", $drug, $costs{$drug};
 	}
 
-
-	if ($costs{cocaine} < 10000)
+	if ($costs{cocaine} < 10000 and grep { "cocaine" } @valid_drugs)
 	{
 		print "Looks like the chinese flooded the market with cheap coke, prices bottomed out!\n";
 	}
@@ -249,7 +253,7 @@ sub do_bidness
 			next;
 		}
 
-		if ($amount eq "max") {
+		if ($amount =~ /m/) {
 			$amount = $bidness_type eq "buy"
 				? int $player->{cash}/$costs{$drug}
 				: $player->{coat}{$drug};
