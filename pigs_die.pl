@@ -157,24 +157,35 @@ sub print_underlined
 sub show_yo_shit
 {
 	my $player = shift;
+	my @shit   = @_;
 
-	print_underlined "YOUR STATS";
+	unless (@shit) {
+		@shit = "all";
+	}
 
-	for my $stat (sort keys %$player) {
-		next if ref $player->{$stat}; #skip coat and skills
-		print "$stat: $player->{$stat}\n";
+	if (grep { /stats|all/ } @shit) {
+		print_underlined "YOUR STATS";
+
+		for my $stat (sort keys %$player) {
+			next if ref $player->{$stat}; #skip coat and skills
+			print "$stat: $player->{$stat}\n";
+		}
 	}
 		
-	print_underlined "SKILLS";
+	if (grep { /skills|all/ } @shit) {
+		print_underlined "SKILLZ";
 
-	for my $skill (sort keys %{$player->{skills}}) {
-		printf "%8s: %d\n", $skill, $player->{skills}{$skill};
+		for my $skill (sort keys %{$player->{skills}}) {
+			printf "%8s: %d%%\n", $skill, 100 * $player->{skills}{$skill};
+		}
 	}
 
-	print_underlined "YOUR COAT";
+	if (grep { /coat|all/ } @shit) {
+		print_underlined "YOUR COAT";
 
-	for my $drug (sort keys %{$player->{coat}}) {
-		printf "%8s: %d\n", $drug, $player->{coat}{$drug};
+		for my $drug (sort keys %{$player->{coat}}) {
+			printf "%8s: %d\n", $drug, $player->{coat}{$drug};
+		}
 	}
 	
 	print "\n";
@@ -222,6 +233,7 @@ sub do_bidness
 	{
 		printf "%8s: %d\n", $drug, $costs{$drug};
 	}
+	show_yo_shit($player, $bidness_type eq "buy" ? "stats" : "coat");
 
 	if ($costs{cocaine} < 10000 and grep { "cocaine" } @valid_drugs)
 	{
@@ -312,10 +324,10 @@ sub main
 		wanted => 0,
 		cash   => 1000,
 		skills => {
-			stealth  => .50,
-			fighting => .50,
-			evasion  => .50,
-			coolness => .50,
+			stealth  => 0.50,
+			fighting => 0.50,
+			evasion  => 0.50,
+			coolness => 0.50,
 		},
 		coat   => {
 			cocaine  => 0,
@@ -333,6 +345,8 @@ sub main
 		s => sub { do_bidness(@_, "sell") },
 	);
 
+	show_yo_shit($player);
+
 	my $option;
 	do {
 		if ($player->{days} >= 30 or $player->{health} <= 0) {
@@ -341,13 +355,11 @@ sub main
 			return;
 		}
 
-		if ($player->{wanted} > 50) { #get hassled by the cops each day
+		if ($player->{wanted} > 10) { #get hassled by the cops each day
 			check_stats($player);
 		};
 
-		redo if $player->{wanted} > 75; #now you can only be hassled by the cops
-
-		show_yo_shit($player);
+		redo if $player->{wanted} > 20; #now you can only be hassled by the cops
 
 		print "===Main Menu===\n [i] check inventory\n [r] rob a bank for some money\n [b] buy drugs\n [s] sell drugs\n [q] QUIT game\n";
 		$option = prompt "What would you like to do?", [ "i", "r", "b", "s", "q" ];
