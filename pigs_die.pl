@@ -238,15 +238,21 @@ sub do_bidness
 	while (my $line = <>)
 	{
 		chomp $line;
-		my ($amount, $drug) = $line =~ / ([0-9]{1,6}) \s+ ($valid_drug_regex) /x;
+		my ($amount, $drug) = $line =~ / ([0-9]{1,6}|max|m) \s+ ($valid_drug_regex) /x;
 
 		return if $line eq "quit" or $line eq "q";
 
 		unless (defined $amount and defined $drug) {
 			print "I don't understand: [$line]\n",
 				"valid drugs are: @valid_drugs\n",
-				"$bidness_type drugs by saying 'amount drug'\n";
+				"$bidness_type drugs by saying 'amount drug' or 'max drug'\n";
 			next;
+		}
+
+		if ($amount eq "max") {
+			$amount = $bidness_type eq "buy"
+				? int $player->{cash}/$costs{$drug}
+				: $player->{coat}{$drug};
 		}
 	
 		my $cost = $amount * $costs{$drug};
