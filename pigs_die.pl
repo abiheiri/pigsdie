@@ -281,7 +281,7 @@ sub do_bidness
 			else
 			{
 
-				$player->{mycash}      = $player->{mycash}      + $cost;
+				$player->{cash}        = $player->{cash}        + $cost;
 				$player->{coat}{$drug} = $player->{coat}{$drug} - $amount;
 				$player->{wanted}++;
 				print "you sold $amount $drug\n";
