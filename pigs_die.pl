@@ -239,6 +239,7 @@ sub do_bidness
 	{
 		print "Looks like the chinese flooded the market with cheap coke, prices bottomed out!\n";
 	}
+	
 	 
 	#regex to match any valid drug, it is reverse sorted by length to avoid a
 	#problem where a substring matches instead of the whole string.  It isn't a
@@ -306,6 +307,7 @@ sub do_bidness
 				$player->{cash}        = $player->{cash}        + $cost;
 				$player->{coat}{$drug} = $player->{coat}{$drug} - $amount;
 				$player->{wanted}++;
+				$player->{skills}{coolness} = $player->{skills}{coolness} + 0.01;
 				print "you sold $amount $drug\n";
 				unless (grep { $_ } values %{ $player->{coat} }) {
 					print "you don't got shit left, go buy somethin'\n";
@@ -314,6 +316,38 @@ sub do_bidness
 			}
 		}
 	}
+}
+
+sub heist
+{
+	my $pigs = 2 + int rand 10;
+	my $bank = 200 + int rand 16000;
+	my $player = shift;
+
+	print "You walk into the bank, assess the situation and find out that there are $pigs officers on duty.\n
+		Would you like to proceed robbing the bank? <y/n>\n";
+
+	my $option = <>;
+	chomp $option;
+
+	if ($option eq "y")
+	{
+		print "You walk up to the teller and quitely hand here a note...\n";
+		print "She gives you $bank in cash!\n";
+
+		$player->{cash} = $player->{cash} + $bank;
+		$player->{wanted} = 100;
+	}
+	elsif ($option eq "n")
+	{
+		print "You cowardly walked away\n";
+	}
+	else 
+	{
+		insult("wrong_key");
+	}
+
+	return;
 }
 
 sub main
@@ -340,7 +374,7 @@ sub main
 
 	my %dispatch = (
 		i => \&show_yo_shit,
-		r => sub { print "not implemented\n" },
+		r => \&heist,
 		b => sub { do_bidness(@_, "buy") },
 		s => sub { do_bidness(@_, "sell") },
 	);
