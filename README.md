@@ -13,10 +13,4 @@ A not very faithful clone of Drug Wars.
 
 
 ## bugs to fix:
-- You hit one of the officiers!
-- Officers left: 0
-- Want to keep fighting?
-- [y/n]
-- y
-- Exiting subroutine via redo at ./pigs_die.pl line 396, <> line 17.
-- Can't "redo" outside a loop block at ./pigs_die.pl line 396, <> line 17.
+look at the issues section.

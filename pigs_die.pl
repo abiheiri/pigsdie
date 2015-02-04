@@ -92,7 +92,7 @@ sub check_stats {
 sub fight_pigs {
 	my $player = shift;
 
-	my $pigs = 3 + int rand 6;
+	my $pigs = 3 + int rand 7;
 
 	my $keep_fighting = "y";
 	while ($pigs and $keep_fighting =~ /y/i) {
@@ -100,7 +100,14 @@ sub fight_pigs {
 		if (rand() <= $player->{skills}{fighting}) {
 			print "You hit one of the officiers!\n";
 			$pigs--;
-			print "Officers left: $pigs\n";
+			unless ($pigs <= 0) { print "Officers left: $pigs\n"; }
+			unless ($pigs > 0)
+		       	{
+			       	$player->{wanted} = 0;
+				print "No piggies left...\n";
+				return;
+		       	}
+
 		} else {
 			print "You suck, hit the target range\n";
 		}
@@ -324,8 +331,7 @@ sub heist
 	my $bank = 200 + int rand 16000;
 	my $player = shift;
 
-	print "Duuuude... seriously?
-		Would you like to proceed robbing the bank? <y/n>\n";
+	print "Duuuude... seriously? Would you like to proceed robbing the bank? <y/n>\n";
 
 	my $option = <>;
 	chomp $option;
