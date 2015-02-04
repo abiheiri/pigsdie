@@ -100,6 +100,7 @@ sub fight_pigs {
 		if (rand() <= $player->{skills}{fighting}) {
 			print "You hit one of the officiers!\n";
 			$pigs--;
+			print "Officers left: $pigs\n";
 		} else {
 			print "You suck, hit the target range\n";
 		}
@@ -320,11 +321,10 @@ sub do_bidness
 
 sub heist
 {
-	my $pigs = 2 + int rand 10;
 	my $bank = 200 + int rand 16000;
 	my $player = shift;
 
-	print "You walk into the bank, assess the situation and find out that there are $pigs officers on duty.\n
+	print "Duuuude... seriously?
 		Would you like to proceed robbing the bank? <y/n>\n";
 
 	my $option = <>;
