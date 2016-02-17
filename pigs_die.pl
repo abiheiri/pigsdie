@@ -270,7 +270,7 @@ sub do_bidness
 		unless (defined $amount and defined $drug) {
 			print "I don't understand: [$line]\n",
 				"valid drugs are: @valid_drugs\n",
-				"$bidness_type drugs by saying 'amount drug' or 'max drug'\n";
+				"$bidness_type drugs by saying 'amount drug' or 'max drug or 'quit''\n";
 			next;
 		}
 
